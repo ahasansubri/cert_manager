@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Download PKCS#12 · {{ cert.subject_cn|default:"Certificate" }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2 class="mb-0">Download PKCS#12</h2>
+  <div class="actions d-flex">
+    <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Back to Certificates</a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-12 col-md-7">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Common Name</dt>
+          <dd class="col-sm-8">{{ cert.subject_cn|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Serial (hex)</dt>
+          <dd class="col-sm-8">{{ cert.serial_hex|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Serial (dec)</dt>
+          <dd class="col-sm-8">{{ cert.serial_decimal|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Issued By</dt>
+          <dd class="col-sm-8">{{ cert.ca.name }}</dd>
+
+          <dt class="col-sm-4">Expires</dt>
+          <dd class="col-sm-8">
+            {% if cert.expires_at %}
+              {{ cert.expires_at|date:"Y-m-d H:i" }}
+            {% else %}
+              —
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+
+      <div class="col-12 col-md-5">
+        {% if not cert.key_pem %}
+          <div class="alert alert-warning">
+            <strong>Note:</strong> The private key for this certificate is <em>not</em> stored.
+            You can still download the existing <code>.p12</code> if it was previously generated,
+            but you cannot re-encrypt it with a new password here.
+          </div>
+        {% endif %}
+
+        <form method="post" class="needs-validation" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="id_password">Password</label>
+            {{ form.password }}
+            <div class="form-text">Enter a password to protect the PKCS#12 bundle<code>.p12</code>.</div>
+            {% if form.password.errors %}
+              <div class="text-danger small mt-1">{{ form.password.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Download .p12</button>
+            <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

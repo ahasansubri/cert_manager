@@ -1,0 +1,202 @@
+# crls/forms.py
+from django import forms
+from django.utils.translation import gettext_lazy as _
+from .models import CA, IssuedCert
+
+# --- Admin: simple pass-through form for CA (fixes ImportError) ---
+
+def _read_utf8(uploaded_file):
+    if not uploaded_file:
+        return ""
+    data = uploaded_file.read()
+    try:
+        return data.decode("utf-8")
+    except Exception:
+        return data.decode("latin-1", errors="ignore")
+
+KEY_CHOICES = (
+    ("RSA-2048", "RSA 2048"),
+    ("RSA-4096", "RSA 4096"),
+    ("EC-P256",  "EC P-256"),
+    ("EC-P384",  "EC P-384"),
+)
+
+DIGEST_CHOICES = (
+    ("SHA256", "SHA256"),
+    ("SHA384", "SHA384"),
+    ("SHA512", "SHA512"),
+)
+
+ISSUER_MODE = (
+    ("self",   "Self-signed"),
+    ("parent", "Signed by existing CA"),
+)
+
+CA_METHOD_CHOICES = (
+    ("internal", "Create internal CA"),
+    ("import",   "Import existing CA"),
+)
+
+class CAAddForm(forms.Form):
+    # identity
+    name  = forms.CharField(max_length=200)
+    slug  = forms.SlugField()
+    active = forms.BooleanField(initial=True, required=False)
+
+    # method switch
+    method = forms.ChoiceField(choices=CA_METHOD_CHOICES, initial="internal")
+
+    # ---- internal creation fields ----
+    key_type      = forms.ChoiceField(choices=KEY_CHOICES, required=False, initial="RSA-2048")
+    digest_algo   = forms.ChoiceField(choices=DIGEST_CHOICES, required=False, initial="SHA256")
+    lifetime_days = forms.IntegerField(required=False, initial=825, min_value=1)
+
+    issuer_mode   = forms.ChoiceField(choices=ISSUER_MODE, required=False, initial="self")
+    issuer_parent = forms.ModelChoiceField(
+        queryset=CA.objects.all(), required=False, empty_label="---------"
+    )
+
+    # subject
+    country_code        = forms.CharField(max_length=2, required=False)
+    state               = forms.CharField(max_length=200, required=False)
+    city                = forms.CharField(max_length=200, required=False)
+    organization        = forms.CharField(max_length=200, required=False)
+    organizational_unit = forms.CharField(max_length=200, required=False)
+    email               = forms.EmailField(required=False)
+    common_name         = forms.CharField(max_length=255, required=False)
+    ocsp_uri            = forms.CharField(max_length=500, required=False)
+
+    # ---- import fields ----
+    issuer_cert_pem = forms.FileField(required=False, help_text="Issuer/public cert PEM (optional)")
+    cert_pem_text   = forms.CharField(widget=forms.Textarea, required=False, label="Cert pem (text)")
+    key_pem_text    = forms.CharField(widget=forms.Textarea, required=False, label="Key pem (text)")
+    cert_pem_file   = forms.FileField(required=False, label="Cert pem (file)")
+    key_pem_file    = forms.FileField(required=False, label="Key pem (file)")
+
+    # issuance control
+    next_serial = forms.IntegerField(initial=1, min_value=1)
+
+    def clean(self):
+        cd = super().clean()
+        method = cd.get("method") or "internal"
+
+        if method == "internal":
+            # enforce needed bits for new CA
+            if not cd.get("common_name"):
+                self.add_error("common_name", "Common Name is required for internal CA.")
+            if cd.get("issuer_mode") == "parent" and not cd.get("issuer_parent"):
+                self.add_error("issuer_parent", "Select a parent CA to sign this CA.")
+        else:
+            # import path: require some cert material
+            have_text = bool(cd.get("cert_pem_text"))
+            have_file = bool(self.files.get("cert_pem_file"))
+            if not (have_text or have_file):
+                self.add_error("cert_pem_text", "Provide cert PEM (text) or upload cert PEM file.")
+        return cd
+
+# --- Existing: Upload CRL (unchanged behavior) ---
+class UploadCRLForm(forms.Form):
+    ca = forms.ModelChoiceField(
+        queryset=CA.objects.all().order_by("name"),
+        label="CA",
+    )
+    file = forms.FileField(
+        label="CRL File",
+        help_text="PEM or DER",
+    )
+
+
+# --- New: Issuance form (internal / sign CSR / import) for Cert Manager ---
+class IssueCertForm(forms.Form):
+    METHOD_CHOICES = (
+        ("internal", "Create internal certificate"),
+        ("import", "Import existing certificate"),
+    )
+    CERT_TYPE_CHOICES = (
+        ("client", "Client Certificate"),
+        ("server", "Server Certificate"),
+    )
+    KEY_TYPE_CHOICES = (
+        ("RSA-2048", "RSA-2048"),
+        ("RSA-4096", "RSA-4096"),
+        ("EC-P256", "EC-P256"),
+        ("EC-P384", "EC-P384"),
+    )
+    DIGEST_CHOICES = (("SHA256", "SHA256"), ("SHA384", "SHA384"), ("SHA512", "SHA512"))
+
+    # --- common ---
+    method = forms.ChoiceField(choices=METHOD_CHOICES, initial="internal", label="Method")
+    ca = forms.ModelChoiceField(queryset=CA.objects.filter(active=True), label="Issuer (CA)")
+    cert_type = forms.ChoiceField(choices=CERT_TYPE_CHOICES, initial="client", label="Type")
+
+    # --- internal only ---
+    key_type = forms.ChoiceField(choices=KEY_TYPE_CHOICES, initial="RSA-2048", label="Key type", required=False)
+    digest_algo = forms.ChoiceField(choices=DIGEST_CHOICES, initial="SHA256", label="Digest algo", required=False)
+    lifetime_days = forms.IntegerField(initial=397, min_value=1, max_value=825, required=False, label="Lifetime (days)")
+
+    # subject (internal only)
+    common_name = forms.CharField(max_length=255, required=False)
+    country_code = forms.CharField(max_length=2, required=False, label="Country Code")
+    state = forms.CharField(max_length=128, required=False, label="State or Province")
+    city = forms.CharField(max_length=128, required=False)
+    organization = forms.CharField(max_length=255, required=False)
+    organizational_unit = forms.CharField(max_length=255, required=False)
+    email = forms.EmailField(required=False)
+
+    # --- import only ---
+    cert_pem = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 10}),
+        label="Certificate (PEM)",
+        help_text="Paste certificate in PEM format or upload a file below.",
+    )
+    cert_file = forms.FileField(required=False, label="Or upload certificate file (PEM)")
+
+    import_key = forms.BooleanField(required=False, initial=False, label="Import private key too")
+    key_pem = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 8}),
+        label="Private key (PEM)",
+        help_text="Paste key in PEM format or upload a file below.",
+    )
+    key_file = forms.FileField(required=False, label="Or upload key file (PEM)")
+
+    def clean(self):
+        cleaned = super().clean()
+        method = cleaned.get("method")
+
+        if method == "internal":
+            # Require CN for internal issuance
+            if not cleaned.get("common_name"):
+                self.add_error("common_name", "Common Name is required for internal issuance.")
+        else:
+            # import mode: require cert (either textarea or file)
+            if not cleaned.get("cert_pem") and not cleaned.get("cert_file"):
+                self.add_error("cert_pem", "Provide a certificate (paste or file upload).")
+
+            # If user wants to import the key, require it (textarea or file)
+            if cleaned.get("import_key"):
+                if not cleaned.get("key_pem") and not cleaned.get("key_file"):
+                    self.add_error("key_pem", "Provide a private key (paste or file upload).")
+
+        return cleaned
+
+# --- New: Revocation form (used by cert_manager_revoke) ---
+class RevokeIssuedCertForm(forms.Form):
+    REASON_CHOICES = (
+        ("unspecified", "Unspecified"),
+        ("key_compromise", "Key compromise"),
+        ("ca_compromise", "CA compromise"),
+        ("affiliation_changed", "Affiliation changed"),
+        ("superseded", "Superseded"),
+        ("cessation_of_operation", "Cessation of operation"),
+        ("certificate_hold", "Certificate hold"),
+        ("remove_from_crl", "Remove from CRL"),
+        ("privilege_withdrawn", "Privilege withdrawn"),
+        ("aa_compromise", "AA compromise"),
+    )
+    reason = forms.ChoiceField(choices=REASON_CHOICES, initial="unspecified")
+    revocation_date = forms.DateTimeField(
+        required=False,
+        help_text="If empty, current time will be used.",
+    )

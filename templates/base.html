@@ -1,0 +1,105 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CRL/OCSP{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'bootstrap-icons/css/bootstrap-icons.css' %}">
+    <style>
+      :root { --brand-dark:#06341e; }
+      body { background:#f8f9fa; }
+      .navbar-brand img { height:40px; }
+      .page-header h2 { margin:0; }
+      .empty { color:#6c757d; }
+      code, .monospace { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace; }
+      .logbox { white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--brand-dark);">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+          <img src="{% static 'images/soc-pki-logo.png' %}" alt="SOC PKI Logo" class="me-2">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav" aria-controls="topnav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="topnav" class="collapse navbar-collapse">
+          {% with name=request.resolver_match.url_name %}
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link{% if name == 'home' %} active{% endif %}" href="{% url 'home' %}">Dashboard</a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link{% if name in 'cert_manager_list cert_manager_add cert_manager_issue cert_manager_issued cert_manager_revoke' %} active{% endif %}"
+                 href="{% url 'cert_manager_list' %}">
+                Certificate Authorities
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link{% if name in 'cert_manager_issued issued_download_p12' %} active{% endif %}"
+                 href="{% url 'cert_manager_issued' %}">Certificates</a>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle{% if name in 'upload_crl settings_index' %} active{% endif %}"
+                 href="#" id="settingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Settings
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                <li><a class="dropdown-item" href="{% url 'upload_crl' %}">Upload CRL</a></li>
+              </ul>
+            </li>
+
+            <!-- NEW: Logs menu -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle{% if name in 'logs_index logs_access logs_error logs_access_live' %} active{% endif %}"
+                 href="#" id="logsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Logs
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="logsDropdown">
+                <li><a class="dropdown-item" href="{% url 'logs_access' %}">Access Logs</a></li>
+                <li><a class="dropdown-item" href="{% url 'logs_error' %}">Error Logs</a></li>
+                <li><a class="dropdown-item" href="{% url 'logs_access_live' %}">Live Access Logs</a></li>
+              </ul>
+            </li>
+          </ul>
+          {% endwith %}
+
+          <div class="d-flex">
+            <a href="/admin/" class="btn btn-outline-light btn-sm">Admin</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container my-4">
+      {% if messages %}
+        <div class="mb-3">
+          {% for m in messages %}
+            <div class="alert alert-{{ m.tags|default:'info' }} mb-2">{{ m }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-top py-3">
+      <div class="container d-flex justify-content-between">
+        <span>&copy; {{ now|date:"Y" }} CRL/OCSP Console</span>
+        <span class="monospace">v2.x</span>
+      </div>
+    </footer>
+
+    <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

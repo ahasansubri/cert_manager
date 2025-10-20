@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Certificate Issued · CRL/OCSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  .download-link {
+    text-decoration: none;   /* remove underline */
+    color: inherit;          /* optional: keep normal text color */
+  }
+  .download-link:hover {
+    text-decoration: none;   /* still no underline on hover */
+    color: #0d6efd;          /* optional: add bootstrap blue on hover */
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2>Certificate Issued</h2>
+  <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">View Issued</a>
+</div>
+
+<div class="alert alert-success">Success! Your certificate has been issued.</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">certificate.pem</div>
+      <div class="card-body">
+        <pre class="mb-0 small"><code>{{ cert_pem }}</code></pre>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">key.pem</div>
+      <div class="card-body">
+        <pre class="mb-0 small"><code>{{ key_pem }}</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if issued_pk %}
+  <div class="card shadow-sm mt-3">
+    <div class="card-header">Permanent Downloads</div>
+    <div class="card-body small">
+      <ul class="mb-0">
+        <li>
+          <a href="{% url 'issued_download_cert' issued_pk %}" class="download-link">📜 Export Cert</a>
+        </li>
+        {% if issued and issued.key_pem %}
+        <li>
+          <a href="{% url 'issued_download_key' issued_pk %}" class="download-link">🔑 Export Key</a>
+        </li>
+        {% endif %}
+        {% if issued and issued.p12_file %}
+        <li>
+          <a href="{% url 'issued_download_p12' issued_pk %}" class="download-link">📦 Export P12</a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

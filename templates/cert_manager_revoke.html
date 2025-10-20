@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load crls_extras %}
+{% block content %}
+<h2>Revoke Certificate</h2>
+
+<div class="card">
+  <div class="section">
+    <p><strong>CN:</strong> {{ cert.subject_cn }}</p>
+    <p><strong>Serial:</strong> <code>{{ cert.serial_hex|default:cert.serial_decimal }}</code></p>
+    <p><strong>CA:</strong> {{ cert.ca.name }}</p>
+  </div>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <fieldset>
+    <legend>Revocation</legend>
+    <div class="row">
+      <div class="col-sm-6">
+        {{ form.reason.label_tag }} {{ form.reason }}
+      </div>
+      <div class="col-sm-6">
+        {{ form.revocation_date.label_tag }} {{ form.revocation_date }}
+      </div>
+    </div>
+    <p class="muted"><small>If left blank, the current time will be used.</small></p>
+  </fieldset>
+
+  <div style="margin-top:1rem">
+    <a class="button" href="{% url 'cert_manager_issued' %}">Cancel</a>
+    <button class="button warning" type="submit">Confirm Revoke</button>
+  </div>
+</form>
+{% endblock %}

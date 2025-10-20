@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load crls_extras %}
+{% block title %}Issue Certificate · CRL/OCSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header h2 { display:flex; align-items:center; gap:.6rem; }
+  .page-header h2 .bi { font-size:1.5rem; opacity:.9; }
+  .card > .card-header {
+    background: linear-gradient(180deg, #f8f9fa, #f1f3f5);
+    font-weight:600;
+  }
+  .section-badge {
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-size:.9rem; padding:.25rem .6rem; border-radius:999px;
+    background:#f1f3f5; color:#0f5132; border:1px solid #e9ecef;
+  }
+  .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .sticky-actions {
+    position: sticky; bottom: 0; z-index: 5;
+    background: #fff; padding:.75rem; border-top:1px solid #e9ecef;
+    display:flex; gap:.5rem; justify-content:flex-end;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2><i class="bi bi-file-earmark-certificate"></i> Issue Certificate</h2>
+  <a class="btn btn-outline-secondary" href="{% url 'cert_manager_issued' %}">Issued list</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="issue-form" class="row g-3">
+  {% csrf_token %}
+
+  <!-- Progress / Steps -->
+  <div class="col-12">
+    <div class="d-flex flex-wrap gap-2 mb-1">
+      <span class="section-badge"><i class="bi bi-sliders"></i> Method & Context</span>
+      <span class="section-badge"><i class="bi bi-person-badge"></i> Subject / Options</span>
+      <span class="section-badge"><i class="bi bi-upload"></i> Import (optional)</span>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header">Method & Context</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Method</label>
+          {{ form.method|add_class:"form-select" }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Type</label>
+          {{ form.cert_type|add_class:"form-select" }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Issuer (CA)</label>
+          {{ form.ca|add_class:"form-select" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERNAL-ONLY options -->
+  <div class="col-12 mode-internal">
+    <div class="card shadow-sm">
+      <div class="card-header">Options</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          {{ form.lifetime_days.label_tag }} {{ form.lifetime_days|add_class:"form-control" }}
+        </div>
+        <div class="col-md-4">
+          {{ form.digest_algo.label_tag }} {{ form.digest_algo|add_class:"form-select" }}
+        </div>
+        <div class="col-md-4">
+          {{ form.key_type.label_tag }} {{ form.key_type|add_class:"form-select" }}
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-header">Subject</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          {{ form.common_name.label_tag }} {{ form.common_name|add_class:"form-control" }}
+          <div class="form-text">Required.</div>
+        </div>
+        <div class="col-md-2">{{ form.country_code.label_tag }} {{ form.country_code|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.state.label_tag }} {{ form.state|add_class:"form-control" }}</div>
+        <div class="col-md-3">{{ form.city.label_tag }} {{ form.city|add_class:"form-control" }}</div>
+        <div class="col-md-4">{{ form.organization.label_tag }} {{ form.organization|add_class:"form-control" }}</div>
+        <div class="col-md-4">{{ form.organizational_unit.label_tag }} {{ form.organizational_unit|add_class:"form-control" }}</div>
+        <div class="col-md-4">{{ form.email.label_tag }} {{ form.email|add_class:"form-control" }}</div>
+      </div>
+      <div class="sticky-actions">
+        <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Cancel</a>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-magic me-1"></i> Issue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORT-ONLY -->
+  <div class="col-12 mode-import">
+    <div class="card shadow-sm">
+      <div class="card-header">Import existing certificate</div>
+      <div class="card-body row g-3">
+        <div class="col-12">
+          {{ form.cert_pem.label_tag }} {{ form.cert_pem|add_class:"form-control monospace" }}
+          <div class="form-text">Paste your certificate in PEM format.</div>
+        </div>
+        <div class="col-md-6">{{ form.cert_file.label_tag }} {{ form.cert_file|add_class:"form-control" }}</div>
+        <div class="col-12"><hr></div>
+        <div class="col-12">
+          <div class="form-check">
+            {{ form.import_key|add_class:"form-check-input" }}
+            <label class="form-check-label" for="id_import_key">Also import a private key</label>
+          </div>
+        </div>
+        <div id="key-import-block">
+          <div class="col-12">{{ form.key_pem.label_tag }} {{ form.key_pem|add_class:"form-control monospace" }}</div>
+          <div class="col-md-6">{{ form.key_file.label_tag }} {{ form.key_file|add_class:"form-control" }}</div>
+        </div>
+      </div>
+      <div class="sticky-actions">
+        <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Cancel</a>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-cloud-arrow-up me-1"></i> Import</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% block extra_js %}
+<script>
+(function () {
+  const methodSel   = document.getElementById("id_method");
+  const modeInternal= document.querySelector(".mode-internal");
+  const modeImport  = document.querySelector(".mode-import");
+  const importKey   = document.getElementById("id_import_key");
+  const keyBlock    = document.getElementById("key-import-block");
+  function syncMode() {
+    const internal = methodSel && methodSel.value === "internal";
+    if (modeInternal) modeInternal.style.display = internal ? "" : "none";
+    if (modeImport)   modeImport.style.display   = internal ? "none" : "";
+  }
+  function syncKey() {
+    if (keyBlock) keyBlock.style.display = (importKey && importKey.checked) ? "" : "none";
+  }
+  if (methodSel) methodSel.addEventListener("change", syncMode);
+  if (importKey) importKey.addEventListener("change", syncKey);
+  syncMode(); syncKey();
+})();
+</script>
+{% endblock %}
+{% endblock %}

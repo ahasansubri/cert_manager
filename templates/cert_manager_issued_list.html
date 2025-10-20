@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Issued Certificates · CRL/OCSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Center headers and table data */
+  .issued-table th,
+  .issued-table td {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  /* Keep Actions aligned right visually, but center content within cell */
+  .issued-table th.text-end,
+  .issued-table td.text-end {
+    text-align: center !important;
+  }
+
+  /* Small round + button matches brand */
+  .btn-circle {
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--brand-dark);
+    color: #fff;
+    border: none;
+  }
+  .btn-circle:hover { opacity: .85; color: #fff; }
+
+  /* Downloads icons (no underline, keep original size) */
+  .download-icons a {
+    text-decoration: none;
+    margin: 0 6px;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  /* Revoke button: disabled/grey look when already revoked */
+  .btn-revoke:disabled,
+  .btn-revoke.disabled {
+    pointer-events: none;
+    opacity: .55;
+    cursor: not-allowed;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2>Issued Certificates</h2>
+  <div class="actions d-flex">
+    <a class="btn btn-sm btn-circle" href="{% url 'cert_manager_issue' %}" title="Issue New">
+      <i class="bi bi-plus-lg" style="font-size:0.9rem;"></i>
+    </a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover table-borderless align-middle mb-0 issued-table">
+      <thead class="table-light">
+        <tr>
+          <th>CA</th>
+          <th>Subject (CN)</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th>Downloads</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% now "UTC" as now %}
+        {% for ic in issued %}
+          <tr>
+            <td>{{ ic.ca.name }}</td>
+            <td>{{ ic.subject_cn|default:"—" }}</td>
+
+            <td>
+              {% if ic.expires_at %}
+                {{ ic.expires_at|date:"Y-m-d H:i" }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+
+            <td>
+              {% if ic.revoked %}
+                <span class="badge bg-danger">Revoked</span>
+              {% elif ic.expires_at and ic.expires_at < now %}
+                <span class="badge bg-secondary">Expired</span>
+              {% else %}
+                <span class="badge bg-success">Good</span>
+              {% endif %}
+            </td>
+
+            <td class="download-icons">
+              <a href="{% url 'issued_download_cert' ic.pk %}" title="Export Cert">📜</a>
+              {% if ic.key_pem %}<a href="{% url 'issued_download_key' ic.pk %}" title="Export Key">🔑</a>{% endif %}
+              {% if ic.p12_file %}<a href="{% url 'issued_download_p12' ic.pk %}" title="Export P12">📦</a>{% endif %}
+            </td>
+
+            <td class="text-end">
+              {% if ic.revoked %}
+                <button class="btn btn-sm btn-secondary btn-revoke" disabled title="Already revoked">Revoke</button>
+              {% else %}
+                <a class="btn btn-sm btn-danger btn-revoke" href="{% url 'cert_manager_revoke' ic.id %}">Revoke</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">No certificates issued yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

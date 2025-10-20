@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Certificate Authorities · CRL/OCSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Remove underline from download icons */
+  .download-icon {
+    text-decoration: none;
+  }
+  .download-icon:hover {
+    opacity: 0.7;
+  }
+
+  /* Center headers and table data */
+  .ca-table th,
+  .ca-table td {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  /* Keep Actions column aligned to right */
+  .ca-table th.text-end,
+  .ca-table td.text-end {
+    text-align: right !important;
+  }
+
+  /* Round + button */
+  .btn-circle {
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+
+  .btn-circle:hover {
+    opacity: 0.8;
+    color: white;
+    background-color: #06341e;
+  }
+
+  .download-icons a {
+    text-decoration: none;
+    margin: 0 4px;
+    font-size: 1.1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2>Certificate Authorities</h2>
+  <div class="actions d-flex">
+    <a class="btn btn-sm btn-circle"
+       href="{% url 'cert_manager_add' %}"
+       style="background-color:#06341e; color:white;">
+      <i class="bi bi-plus-lg" style="font-size:0.9rem;"></i>
+    </a>
+  </div>
+</div>
+
+<div class="card card-table shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover table-borderless align-middle mb-0 ca-table">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Active</th>
+          <th>Usage</th>
+          <th>Revoked</th>
+          <th>Latest CRL</th>
+          <th>Downloads</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for ca in cas %}
+        {% with latest=ca.latest_crl %}
+        <tr>
+          <td class="fw-medium">{{ ca.name }}</td>
+
+          <td>
+            {% if ca.active %}
+              <span class="badge text-bg-success">Active</span>
+            {% else %}
+              <span class="badge text-bg-secondary">Disabled</span>
+            {% endif %}
+          </td>
+
+          <td>{{ ca.issued.count }}</td>
+
+          <td>
+            {% if latest %}
+              <span class="badge text-bg-secondary">{{ latest.revoked_count }}</span>
+            {% else %}
+              0
+            {% endif %}
+          </td>
+
+          <td>
+            {% if latest %}
+              {{ latest.uploaded_at|date:"Y-m-d H:i" }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+
+          <td class="download-icons">
+            <a href="{% url 'cm_download_cert' ca.slug %}" class="download-icon">📜</a>
+            {% if ca.key_pem %}
+              <a href="{% url 'cm_download_key' ca.slug %}" class="download-icon">🔑</a>
+            {% endif %}
+            {% if ca.cert_pem and ca.key_pem %}
+              <a href="{% url 'cm_download_p12' ca.slug %}" class="download-icon">📦</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+      {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            No CAs yet.
+            <a class="btn btn-sm btn-circle"
+               href="{% url 'cert_manager_add' %}"
+               style="background-color:#06341e; color:white; margin-left:8px;">
+              <i class="bi bi-plus-lg" style="font-size:0.9rem;"></i>
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

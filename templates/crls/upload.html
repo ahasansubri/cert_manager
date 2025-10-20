@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load crls_extras %}
+{% block title %}Upload CRL · CRL/OCSP{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-3">
+  <h2>Upload CRL</h2>
+  <a href="{% url 'home' %}" class="btn btn-outline-secondary">Back</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">CA</label>
+        {{ form.ca|add_class:"form-select" }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">CRL File (PEM or DER)</label>
+        {{ form.file|add_class:"form-control" }}
+        <div class="form-text">{{ form.file.help_text }}</div>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary">Upload</button>
+        <a href="{% url 'home' %}" class="btn btn-link">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

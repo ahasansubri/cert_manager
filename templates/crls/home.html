@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · CRL/OCSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Center headers and table data */
+  .dashboard-table th,
+  .dashboard-table td {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  /* Keep Sync column centered */
+  .dashboard-table th.text-end,
+  .dashboard-table td.text-end {
+    text-align: center !important;
+  }
+
+  /* Sync icon button */
+  .sync-btn {
+    border: none;
+    background: none;
+    color: #0d6efd;
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .sync-btn:hover { color: #0a58ca; }
+
+  /* Disabled-looking sync icon */
+  .sync-btn.disabled,
+  .sync-btn[disabled] {
+    color: #adb5bd !important;        /* gray */
+    cursor: not-allowed !important;
+    pointer-events: none;              /* truly non-clickable */
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2>Certificate Authorities</h2>
+</div>
+
+<div class="card card-table shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0 dashboard-table">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">CA</th>
+          <th scope="col">Usage</th>
+          <th scope="col">Revoked</th>
+          <th scope="col">Latest CRL</th>
+          <th scope="col">Expires</th>
+          <th scope="col" class="text-end">Sync</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ca in cas %}
+          {% with crl=ca.latest_crl %}
+          <tr>
+            <td class="fw-medium">{{ ca.name }}</td>
+
+            <td>{{ ca.issued.count }}</td>
+
+            <td>
+              {% if crl %}
+                <span class="badge text-bg-secondary">{{ crl.revoked_count }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if crl %}
+                {{ crl.uploaded_at|date:"Y-m-d H:i" }}
+                <a href="/pki/{{ ca.slug }}.crl" title="Download CRL" class="ms-2 text-decoration-none">
+                  <i class="bi bi-download"></i>
+                </a>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if ca.expires_at %}
+                {{ ca.expires_at|date:"Y-m-d H:i" }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td class="text-end">
+              {% if ca.opnsense_source and ca.opnsense_source.enabled %}
+                <!-- Enabled: OPNsense source present -->
+                <form method="post" action="{% url 'sync_now' ca.slug %}" class="d-inline">
+                  {% csrf_token %}
+                  <button class="sync-btn" title="Sync Now">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                </form>
+              {% else %}
+                <!-- Disabled: no OPNsense source configured/enabled -->
+                <button class="sync-btn disabled" title="OPNsense source not configured">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+        {% empty %}
+          <tr>
+            <td colspan="6">
+              <div class="empty">
+                No CAs yet. Create one in
+                <a href="{% url 'cert_manager_list' %}">Certificate Authorities</a>.
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

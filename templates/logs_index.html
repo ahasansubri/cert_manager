@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Logs · CRL/OCSP{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2>Logs</h2>
+</div>
+
+<div class="list-group">
+  <a class="list-group-item list-group-item-action" href="{% url 'logs_access' %}">
+    Access Logs <small class="text-muted">(/var/log/apache2/crlserver_access.log)</small>
+  </a>
+  <a class="list-group-item list-group-item-action" href="{% url 'logs_error' %}">
+    Error Logs <small class="text-muted">(/var/log/apache2/crlserver_error.log)</small>
+  </a>
+  <a class="list-group-item list-group-item-action" href="{% url 'logs_access_live' %}">
+    Live Access Logs
+  </a>
+</div>
+{% endblock %}

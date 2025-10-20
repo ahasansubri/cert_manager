@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% load crls_extras %}
+{% block title %}Add CA · CRL/OCSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header h2 { display:flex; align-items:center; gap:.6rem; }
+  .page-header h2 .bi { font-size:1.5rem; opacity:.9; }
+  .section-badge {
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-size:.9rem; padding:.25rem .6rem; border-radius:999px;
+    background:#f1f3f5; color:#0f5132; border:1px solid #e9ecef;
+  }
+  .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .card > .card-header {
+    background: linear-gradient(180deg, #f8f9fa, #f1f3f5);
+    font-weight:600;
+  }
+  .sticky-actions {
+    position: sticky; bottom: 0; z-index: 5;
+    background: #fff; padding:.75rem; border-top:1px solid #e9ecef;
+    display:flex; gap:.5rem; justify-content:flex-end;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2><i class="bi bi-shield-lock"></i> Add Certificate Authority</h2>
+  <a href="{% url 'cert_manager_list' %}" class="btn btn-outline-secondary">Back</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="ca-form" class="row g-3">
+  {% csrf_token %}
+
+  <!-- Progress / Steps -->
+  <div class="col-12">
+    <div class="d-flex flex-wrap gap-2 mb-1">
+      <span class="section-badge"><i class="bi bi-person-badge"></i> Identity</span>
+      <span class="section-badge"><i class="bi bi-tools"></i> Create / Import</span>
+      <span class="section-badge"><i class="bi bi-gear"></i> Issuance Control</span>
+    </div>
+  </div>
+
+  <!-- Identity -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header">Identity</div>
+      <div class="card-body row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Name</label>
+          {{ form.name|add_class:"form-control" }}
+          <div class="form-text">Human-friendly display name of this CA.</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Slug</label>
+          {{ form.slug|add_class:"form-control" }}
+          <div class="form-text">Used in URLs & downloads (e.g. <code>/pki/&lt;slug&gt;.crl</code>).</div>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            {{ form.active|add_class:"form-check-input" }}
+            <label class="form-check-label" for="id_active">Active</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Description</label>
+          {{ form.description|add_class:"form-control" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Method -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header">Creation / Import</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Method</label>
+          {{ form.method|add_class:"form-select" }}
+          <div class="form-text">Create a new internal CA or import an existing one.</div>
+        </div>
+
+        <!-- INTERNAL-ONLY -->
+        <div class="col-12 mode-internal">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Key Type</label>
+              {{ form.key_type|add_class:"form-select" }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Digest</label>
+              {{ form.digest_algo|add_class:"form-select" }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Lifetime (days)</label>
+              {{ form.lifetime_days|add_class:"form-control" }}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Issuer Mode</label>
+              {{ form.issuer_mode|add_class:"form-select" }}
+              <div class="form-text">Self-signed or signed by a parent CA.</div>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Issuer (Parent CA)</label>
+              {{ form.issuer_parent|add_class:"form-select" }}
+            </div>
+
+            <hr class="mt-2 mb-1">
+            <div class="col-12"><strong>Subject</strong></div>
+            <div class="col-md-4">
+              <label class="form-label">Common Name</label>
+              {{ form.common_name|add_class:"form-control" }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Country</label>
+              {{ form.country_code|add_class:"form-control" }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">State/Province</label>
+              {{ form.state|add_class:"form-control" }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">City</label>
+              {{ form.city|add_class:"form-control" }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Organization</label>
+              {{ form.organization|add_class:"form-control" }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Organizational Unit</label>
+              {{ form.organizational_unit|add_class:"form-control" }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Email</label>
+              {{ form.email|add_class:"form-control" }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">OCSP URI</label>
+              {{ form.ocsp_uri|add_class:"form-control" }}
+              <div class="form-text">Optional AIA OCSP URL to embed in issued certificates.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- IMPORT-ONLY -->
+        <div class="col-12 mode-import">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Issuer Cert (PEM)</label>
+              {{ form.issuer_cert_pem|add_class:"form-control monospace" }}
+              <div class="form-text">If this CA has a distinct issuer, provide it here (PEM or bundle).</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">CA Certificate (PEM)</label>
+              {{ form.cert_pem|add_class:"form-control monospace" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Or upload certificate file (PEM)</label>
+              {{ form.cert_file|add_class:"form-control" }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">CA Private Key (PEM)</label>
+              {{ form.key_pem|add_class:"form-control monospace" }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Or upload key file (PEM)</label>
+              {{ form.key_file|add_class:"form-control" }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Issuance control -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header">Issuance Control</div>
+      <div class="card-body">
+        <div class="col-md-4">
+          <label class="form-label">Next Serial</label>
+          {{ form.next_serial|add_class:"form-control" }}
+          <div class="form-text">Optional explicit serial to use for the next issued certificate.</div>
+        </div>
+      </div>
+      <div class="sticky-actions">
+        <a class="btn btn-outline-secondary" href="{% url 'cert_manager_list' %}">Cancel</a>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Save</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% block extra_js %}
+<script>
+(function () {
+  const methodSel = document.getElementById("id_method");
+  const modeInternal = document.querySelector(".mode-internal");
+  const modeImport = document.querySelector(".mode-import");
+  function syncMode() {
+    const m = methodSel ? methodSel.value : "internal";
+    const internal = (m === "internal");
+    if (modeInternal) modeInternal.style.display = internal ? "" : "none";
+    if (modeImport) modeImport.style.display = internal ? "none" : "";
+  }
+  if (methodSel) methodSel.addEventListener("change", syncMode);
+  syncMode();
+})();
+</script>
+{% endblock %}
+{% endblock %}
