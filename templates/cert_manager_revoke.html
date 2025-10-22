@@ -1,34 +1,84 @@
 {% extends "base.html" %}
 {% load crls_extras %}
-{% block content %}
-<h2>Revoke Certificate</h2>
+{% block title %}Revoke Certificate · CRL/OCSP{% endblock %}
 
-<div class="card">
-  <div class="section">
-    <p><strong>CN:</strong> {{ cert.subject_cn }}</p>
-    <p><strong>Serial:</strong> <code>{{ cert.serial_hex|default:cert.serial_decimal }}</code></p>
-    <p><strong>CA:</strong> {{ cert.ca.name }}</p>
+{% block extra_head %}
+<style>
+  .cert-summary .item-label { color: #6c757d; font-size: .9rem; }
+  .cert-summary .item-value { font-weight: 600; }
+  .danger-accent { background: rgba(220,53,69,.08); border-left: 4px solid #dc3545; }
+  .btn-brand-danger {
+    background-color: var(--brand-dark, #dc3545);
+    border-color: var(--brand-dark, #dc3545);
+    color: #fff;
+  }
+  .btn-brand-danger:hover { opacity: .6; background-color: #06341e; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 page-header">
+  <h2 class="mb-0">Revoke Certificate</h2>
+  <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Issued
+  </a>
+</div>
+
+<div class="alert danger-accent d-flex align-items-start gap-2">
+  <i class="bi bi-exclamation-triangle-fill fs-4 text-danger"></i>
+  <div>
+    <div class="fw-semibold">This action cannot be undone.</div>
+    <div class="small text-muted">
+      Once revoked, this certificate will appear as revoked immediately in the UI, and will be included in the next CRL.
+    </div>
   </div>
 </div>
 
-<form method="post">
-  {% csrf_token %}
-  <fieldset>
-    <legend>Revocation</legend>
-    <div class="row">
-      <div class="col-sm-6">
-        {{ form.reason.label_tag }} {{ form.reason }}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-light fw-semibold">Certificate Summary</div>
+  <div class="card-body cert-summary">
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-4">
+        <div class="item-label">Common Name (CN)</div>
+        <div class="item-value">{{ cert.subject_cn|default:"—" }}</div>
       </div>
-      <div class="col-sm-6">
-        {{ form.revocation_date.label_tag }} {{ form.revocation_date }}
+      <div class="col-md-6 col-lg-4">
+        <div class="item-label">Serial</div>
+        <div class="item-value">
+          <code class="me-2">{{ cert.serial_hex|default:cert.serial_decimal }}</code>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="item-label">Issuer (CA)</div>
+        <div class="item-value">{{ cert.ca.name }}</div>
       </div>
     </div>
-    <p class="muted"><small>If left blank, the current time will be used.</small></p>
-  </fieldset>
+  </div>
+</div>
 
-  <div style="margin-top:1rem">
-    <a class="button" href="{% url 'cert_manager_issued' %}">Cancel</a>
-    <button class="button warning" type="submit">Confirm Revoke</button>
+<form method="post" class="card shadow-sm">
+  {% csrf_token %}
+  <div class="card-header bg-light fw-semibold">Revocation Details</div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">{{ form.reason.label }}</label>
+        {{ form.reason|add_class:"form-select" }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ form.revocation_date.label }}</label>
+        {{ form.revocation_date|add_class:"form-control" }}
+        <div class="form-text">If left blank, the current time will be used.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-between">
+    <a class="btn btn-outline-secondary" href="{% url 'cert_manager_issued' %}">
+      Cancel
+    </a>
+    <button class="btn btn-brand-danger">
+      <i class="bi bi-x-octagon-fill me-1"></i> Confirm Revoke
+    </button>
   </div>
 </form>
 {% endblock %}
