@@ -1,69 +1,170 @@
 {% extends "base.html" %}
 {% block title %}Download PKCS#12 · {{ cert.subject_cn|default:"Certificate" }}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .summary-card .item-label { color:#6c757d; font-size:.9rem; }
+  .summary-card .item-value { font-weight:600; }
+  .banner {
+    background: linear-gradient(135deg, rgba(6,52,30,.06), rgba(6,52,30,.12));
+    border-left: 4px solid var(--brand-dark, #06341e);
+  }
+  .btn-brand {
+    background-color: var(--brand-dark, #06341e);
+    border-color: var(--brand-dark, #06341e);
+    color:#fff;
+  }
+  .btn-brand:hover { opacity: .6; background-color: #06341e; color: white; }
+  .hint { color:#6c757d; font-size:.9rem; }
+  .badge-kv {
+    display:inline-block;
+    min-width:20px;
+    padding:.35em .5em;
+    border-radius:.5rem;
+    background:#e9ecef;
+    font-size:.8rem;
+    font-weight:600;
+    color:#495057;
+  }
+
+  /* Password input border fix */
+  .pw-input .input-group {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+  .pw-input .form-control {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .pw-input .btn {
+    border: none !important;
+    background: #fff;
+  }
+  .pw-input .btn:hover {
+    background: #f8f9fa;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 page-header">
   <h2 class="mb-0">Download PKCS#12</h2>
   <div class="actions d-flex">
-    <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Back to Certificates</a>
+    <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back to Certificates
+    </a>
   </div>
 </div>
 
-<div class="card shadow-sm">
-  <div class="card-body">
-    <div class="row g-3">
-      <div class="col-12 col-md-7">
-        <dl class="row mb-0">
-          <dt class="col-sm-4">Common Name</dt>
-          <dd class="col-sm-8">{{ cert.subject_cn|default:"—" }}</dd>
-
-          <dt class="col-sm-4">Serial (hex)</dt>
-          <dd class="col-sm-8">{{ cert.serial_hex|default:"—" }}</dd>
-
-          <dt class="col-sm-4">Serial (dec)</dt>
-          <dd class="col-sm-8">{{ cert.serial_decimal|default:"—" }}</dd>
-
-          <dt class="col-sm-4">Issued By</dt>
-          <dd class="col-sm-8">{{ cert.ca.name }}</dd>
-
-          <dt class="col-sm-4">Expires</dt>
-          <dd class="col-sm-8">
-            {% if cert.expires_at %}
-              {{ cert.expires_at|date:"Y-m-d H:i" }}
-            {% else %}
-              —
-            {% endif %}
-          </dd>
-        </dl>
-      </div>
-
-      <div class="col-12 col-md-5">
-        {% if not cert.key_pem %}
-          <div class="alert alert-warning">
-            <strong>Note:</strong> The private key for this certificate is <em>not</em> stored.
-            You can still download the existing <code>.p12</code> if it was previously generated,
-            but you cannot re-encrypt it with a new password here.
-          </div>
-        {% endif %}
-
-        <form method="post" class="needs-validation" novalidate>
-          {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label" for="id_password">Password</label>
-            {{ form.password }}
-            <div class="form-text">Enter a password to protect the PKCS#12 bundle<code>.p12</code>.</div>
-            {% if form.password.errors %}
-              <div class="text-danger small mt-1">{{ form.password.errors|join:", " }}</div>
-            {% endif %}
-          </div>
-
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Download .p12</button>
-            <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Cancel</a>
-          </div>
-        </form>
-      </div>
+<div class="alert banner d-flex align-items-start gap-2 mb-3">
+  <i class="bi bi-shield-lock-fill fs-4 me-1"></i>
+  <div>
+    <div class="fw-semibold">Create an encrypted PKCS#12 bundle (.p12)</div>
+    <div class="small hint">
+      Your certificate, private key, and issuer chain will be exported and protected with the password you set below.
     </div>
   </div>
 </div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card shadow-sm summary-card h-100">
+      <div class="card-header bg-light fw-semibold">Certificate Summary</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="item-label">Common Name (CN)</div>
+            <div class="item-value">{{ cert.subject_cn|default:"—" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="item-label">Issued By</div>
+            <div class="item-value">{{ cert.ca.name }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="item-label">Serial (hex)</div>
+            <div class="item-value"><code>{{ cert.serial_hex|default:"—" }}</code></div>
+          </div>
+          <div class="col-md-6">
+            <div class="item-label">Serial (dec)</div>
+            <div class="item-value"><code>{{ cert.serial_decimal|default:"—" }}</code></div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="item-label">Expires</div>
+            <div class="item-value">
+              {% if cert.expires_at %}{{ cert.expires_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="item-label">Key Present</div>
+            <div class="item-value">
+              {% if cert.key_pem %}
+                <span class="badge-kv">Yes</span>
+              {% else %}
+                <span class="badge-kv">No</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if not cert.key_pem %}
+          <div class="alert alert-warning mt-3 mb-0">
+            <i class="bi bi-info-circle-fill me-1"></i>
+            The private key for this certificate is <em>not</em> stored.
+            You can only download an existing <code>.p12</code> if it was previously generated; re-encryption is not possible without the private key.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <form method="post" class="card shadow-sm">
+      {% csrf_token %}
+      <div class="card-header bg-light fw-semibold">Protect with Password</div>
+      <div class="card-body">
+        <div class="mb-3 pw-input">
+          <label for="id_password" class="form-label">Password <span class="text-danger">*</span></label>
+          <div class="input-group">
+            {{ form.password }}
+            <button type="button" class="btn btn-outline-secondary" id="togglePw" tabindex="-1" aria-label="Show/Hide password">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          <div class="form-text">Use a strong password; you’ll need it to import the <code>.p12</code>.</div>
+          {% if form.password.errors %}
+            <div class="text-danger small mt-1">{{ form.password.errors|join:", " }}</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-brand">
+            <i class="bi bi-box-arrow-down me-1"></i> Download .p12
+          </button>
+          <a href="{% url 'cert_manager_issued' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const pw = document.getElementById('id_password');
+    const btn = document.getElementById('togglePw');
+    if (pw && btn) {
+      btn.addEventListener('click', function(){
+        const is = pw.getAttribute('type') === 'password';
+        pw.setAttribute('type', is ? 'text' : 'password');
+        const icon = this.querySelector('i');
+        if (icon) {
+          icon.classList.toggle('bi-eye');
+          icon.classList.toggle('bi-eye-slash');
+        }
+      });
+    }
+  })();
+</script>
 {% endblock %}

@@ -3,6 +3,10 @@
 
 {% block extra_head %}
 <style>
+  /* Modern layout polish */
+  .page-header h2 { margin: 0; font-weight: 600; }
+  .card.sleek { border: 1px solid #e9ecef; border-radius: .75rem; }
+
   /* Center headers and table data */
   .issued-table th,
   .issued-table td {
@@ -10,33 +14,27 @@
     vertical-align: middle;
   }
 
-  /* Keep Actions aligned right visually, but center content within cell */
-  .issued-table th.text-end,
-  .issued-table td.text-end {
-    text-align: center !important;
-  }
-
-  /* Small round + button matches brand */
-  .btn-circle {
+  /* + Button (brand style, subtle shadow) */
+  .btn-add {
+    background-color: var(--brand-dark, #06341e);
+    color: #fff;
+    border: none;
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    padding: 0;
+    width: 38px;
+    height: 38px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--brand-dark);
-    color: #fff;
-    border: none;
+    font-size: 1.1rem;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+  .btn-add:hover {
+    background-color: #052b17;
+    transform: scale(1.05);
   }
 
-  .btn-circle:hover {
-    opacity: 0.8;
-    color: white;
-    background-color: #06341e;
-  }
-
-  /* Downloads icons (no underline, keep original size) */
+  /* Downloads icons */
   .download-icons a {
     text-decoration: none;
     margin: 0 6px;
@@ -44,7 +42,30 @@
     line-height: 1;
   }
 
-  /* Revoke button: disabled/grey look when already revoked */
+  /* Status badges */
+  .badge-status {
+    padding: 0.45em .75em;
+    font-weight: 600;
+    border-radius: .5rem;
+    border: 1px solid transparent;
+  }
+  .badge-good {
+    background: #e8f5ee;
+    color: #166c3b;
+    border-color: #cde7d3;
+  }
+  .badge-expired {
+    background: #f3f4f6;
+    color: #495057;
+    border-color: #dee2e6;
+  }
+  .badge-revoked {
+    background: #fdeaea;
+    color: #b02a37;
+    border-color: #f5c2c7;
+  }
+
+  /* Revoke button: greyed when revoked */
   .btn-revoke:disabled,
   .btn-revoke.disabled {
     pointer-events: none;
@@ -57,14 +78,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 page-header">
   <h2>Issued Certificates</h2>
-  <div class="actions d-flex">
-    <a class="btn btn-sm btn-circle" href="{% url 'cert_manager_issue' %}" title="Issue New">
-      <i class="bi bi-plus-lg" style="font-size:0.9rem;"></i>
-    </a>
-  </div>
+  <a class="btn-add" href="{% url 'cert_manager_issue' %}" title="Issue New">
+    <i class="bi bi-plus-lg"></i>
+  </a>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm sleek">
   <div class="table-responsive">
     <table class="table table-hover table-borderless align-middle mb-0 issued-table">
       <thead class="table-light">
@@ -74,14 +93,14 @@
           <th>Expires</th>
           <th>Status</th>
           <th>Downloads</th>
-          <th class="text-end">Actions</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% now "UTC" as now %}
         {% for ic in issued %}
           <tr>
-            <td>{{ ic.ca.name }}</td>
+            <td class="fw-medium">{{ ic.ca.name }}</td>
             <td>{{ ic.subject_cn|default:"—" }}</td>
 
             <td>
@@ -94,31 +113,41 @@
 
             <td>
               {% if ic.revoked %}
-                <span class="badge bg-danger">Revoked</span>
+                <span class="badge badge-status badge-revoked">Revoked</span>
               {% elif ic.expires_at and ic.expires_at < now %}
-                <span class="badge bg-secondary">Expired</span>
+                <span class="badge badge-status badge-expired">Expired</span>
               {% else %}
-                <span class="badge bg-success">Good</span>
+                <span class="badge badge-status badge-good">Good</span>
               {% endif %}
             </td>
 
             <td class="download-icons">
               <a href="{% url 'issued_download_cert' ic.pk %}" title="Export Cert">📜</a>
-              {% if ic.key_pem %}<a href="{% url 'issued_download_key' ic.pk %}" title="Export Key">🔑</a>{% endif %}
-              {% if ic.p12_file %}<a href="{% url 'issued_download_p12' ic.pk %}" title="Export P12">📦</a>{% endif %}
+              {% if ic.key_pem %}
+                <a href="{% url 'issued_download_key' ic.pk %}" title="Export Key">🔑</a>
+              {% endif %}
+              {% if ic.p12_file %}
+                <a href="{% url 'issued_download_p12' ic.pk %}" title="Export P12">📦</a>
+              {% endif %}
             </td>
 
-            <td class="text-end">
+            <td>
               {% if ic.revoked %}
-                <button class="btn btn-sm btn-secondary btn-revoke" disabled title="Already revoked">Revoke</button>
+                <button class="btn btn-sm btn-secondary btn-revoke" disabled title="Already revoked">
+                  <i class="bi bi-slash-circle"></i> Revoked
+                </button>
               {% else %}
-                <a class="btn btn-sm btn-danger btn-revoke" href="{% url 'cert_manager_revoke' ic.id %}">Revoke</a>
+                <a class="btn btn-sm btn-danger btn-revoke" href="{% url 'cert_manager_revoke' ic.id %}">
+                  <i class="bi bi-x-circle"></i> Revoke
+                </a>
               {% endif %}
             </td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" class="text-center text-muted py-4">No certificates issued yet.</td>
+            <td colspan="6" class="text-center text-muted py-4">
+              No certificates issued yet.
+            </td>
           </tr>
         {% endfor %}
       </tbody>
