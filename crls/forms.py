@@ -68,7 +68,7 @@ class CAAdminForm(forms.ModelForm):
     )
     lifetime_days = forms.IntegerField(
         label=_("Lifetime (days)"),
-        initial=825,
+        initial=2920,
         min_value=1,
         required=False,
     )
@@ -205,7 +205,7 @@ class IssueCertForm(forms.Form):
     # --- internal only ---
     key_type = forms.ChoiceField(choices=KEY_TYPE_CHOICES, initial="RSA-2048", label="Key type", required=False)
     digest_algo = forms.ChoiceField(choices=DIGEST_CHOICES, initial="SHA256", label="Digest algo", required=False)
-    lifetime_days = forms.IntegerField(initial=397, min_value=1, max_value=825, required=False, label="Lifetime (days)")
+    lifetime_days = forms.IntegerField(initial=1460, min_value=1, max_value=1460, required=False, label="Lifetime (days)")
 
     # subject (internal only)
     common_name = forms.CharField(max_length=255, required=False)
