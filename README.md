@@ -1,4 +1,4 @@
-# 🛡️ Mini PKI Certificate Manager
+# 🛡️ Mini PKI Certificate Manager - Internal PKI Web App
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Django](https://img.shields.io/badge/Django-4.x-success.svg)](https://www.djangoproject.com/)
