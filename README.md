@@ -1,4 +1,4 @@
-# 🛡️ Mini PKI Certificate Manager - Internal PKI Web App
+# 🛡️ Mini Internal PKI Certificate Manager - Web App
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Django](https://img.shields.io/badge/Django-4.x-success.svg)](https://www.djangoproject.com/)
@@ -7,7 +7,7 @@
 [![Forks](https://img.shields.io/github/forks/ahasansubri/cert_manager.svg?style=social)](https://github.com/ahasansubri/cert_manager/network/members)
 [![Issues](https://img.shields.io/github/issues/ahasansubri/cert_manager.svg)](https://github.com/ahasansubri/cert_manager/issues)
 
-**Mini PKI Certificate Manager** is a Django-based web application designed for managing internal certificate lifecycles — including certificate issuance, revocation, CRL generation, and OCSP response serving for VPN authentication systems.
+**Mini Internal PKI Certificate Manager** is a Django-based web application designed for managing internal certificate lifecycles — including certificate issuance, revocation, CRL generation, and OCSP response serving for VPN authentication systems.
 
 ---
 
