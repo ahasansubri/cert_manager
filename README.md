@@ -296,7 +296,7 @@ sudo ./deploy_crlserver.sh
 ### ✨ What the Script Does
 
 - Installs all required packages (Python, Apache2, mod_wsgi, etc.)
-- lones the repository
+- Clones the repository
 - Sets up Python virtual environment
 - Installs project dependencies
 - Applies database migrations
